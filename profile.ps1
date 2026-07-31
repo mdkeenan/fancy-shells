@@ -1,4 +1,17 @@
+# fancy-shells version: 2.0.0 — https://github.com/mdkeenan/fancy-shells
 # PowerShell profile: custom prompt and shell defaults.
+
+# fancy-shells tools on PATH (install writes ~/.fancy-shells-home)
+$fancyShellsHomeFile = Join-Path $HOME '.fancy-shells-home'
+if (Test-Path -LiteralPath $fancyShellsHomeFile) {
+    $fancyShellsHome = (Get-Content -LiteralPath $fancyShellsHomeFile -Raw).Trim()
+    if ($fancyShellsHome) {
+        $fancyShellsBin = Join-Path $fancyShellsHome 'tools\bin'
+        if ((Test-Path -LiteralPath $fancyShellsBin) -and ($env:PATH -notlike "*$fancyShellsBin*")) {
+            $env:PATH = "$fancyShellsBin;$env:PATH"
+        }
+    }
+}
 
 # History settings (PowerShell caps MaximumHistoryCount at 32767)
 $MaximumHistoryCount = 32767
@@ -39,22 +52,40 @@ function global:Shorten-PathSegments {
     return $joined
 }
 
+function global:Test-FancyShellsPrivileged {
+    if ($PSVersionTable.PSVersion.Major -ge 6) {
+        if ($IsWindows) {
+            $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+            $principal = [Security.Principal.WindowsPrincipal]$identity
+            $adminSid = [Security.Principal.SecurityIdentifier]::new('S-1-5-32-544')
+            return $principal.IsInRole($adminSid)
+        }
+        if ($IsLinux -or $IsMacOS) {
+            if ((id -u) -eq 0) { return $true }
+            $groups = (id -nG) -split '\s+'
+            return 'sudo' -in $groups -or 'wheel' -in $groups -or 'admin' -in $groups
+        }
+        return $false
+    }
+
+    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $principal = [Security.Principal.WindowsPrincipal]$identity
+    $adminSid = [Security.Principal.SecurityIdentifier]::new('S-1-5-32-544')
+    return $principal.IsInRole($adminSid)
+}
+
 function global:Get-PromptDirectory {
     param([string]$Path)
 
     if (-not $HOME) {
-        $leaf = Split-Path -Leaf $Path
-        $result = if ($leaf) { $leaf } else { $Path }
-        return Shorten-PathSegments $result
+        return Shorten-PathSegments $Path
     }
 
     try {
         $currentPath = [System.IO.Path]::GetFullPath($Path)
         $homePath = [System.IO.Path]::GetFullPath($HOME)
     } catch {
-        $leaf = Split-Path -Leaf $Path
-        $result = if ($leaf) { $leaf } else { $Path }
-        return Shorten-PathSegments $result
+        return Shorten-PathSegments $Path
     }
 
     if ($currentPath.Equals($homePath, [StringComparison]::OrdinalIgnoreCase)) {
@@ -67,9 +98,17 @@ function global:Get-PromptDirectory {
         return Shorten-PathSegments "~/$relative"
     }
 
-    $leaf = Split-Path -Leaf $currentPath
-    if (-not $leaf) { return Shorten-PathSegments $currentPath }
-    return Shorten-PathSegments $leaf
+    $display = $currentPath.Replace('\', '/')
+    if ($display -match '^[A-Za-z]:/') {
+        $drive = $display.Substring(0, 1).ToLowerInvariant()
+        $rest = $display.Substring(3)
+        if ($rest) {
+            return Shorten-PathSegments "/$drive/$rest"
+        }
+        return "/$drive"
+    }
+
+    return Shorten-PathSegments $display
 }
 
 function global:prompt {
@@ -78,28 +117,7 @@ function global:prompt {
     $hostname = if ($env:COMPUTERNAME) { $env:COMPUTERNAME } else { (hostname) }
     $location = Get-Location
     $leaf = Get-PromptDirectory $location.Path
-
-    $isPrivileged = $false
-    if ($PSVersionTable.PSVersion.Major -ge 6) {
-        if ($IsWindows) {
-            $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-            $principal = [Security.Principal.WindowsPrincipal]$identity
-            $adminSid = [Security.Principal.SecurityIdentifier]::new('S-1-5-32-544')
-            $isPrivileged = $principal.IsInRole($adminSid)
-        } elseif ($IsLinux -or $IsMacOS) {
-            $isRoot = (id -u) -eq 0
-            $isPrivileged = $isRoot
-            if (-not $isPrivileged) {
-                $groups = (id -nG) -split '\s+'
-                $isPrivileged = 'sudo' -in $groups -or 'wheel' -in $groups -or 'admin' -in $groups
-            }
-        }
-    } else {
-        $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-        $principal = [Security.Principal.WindowsPrincipal]$identity
-        $adminSid = [Security.Principal.SecurityIdentifier]::new('S-1-5-32-544')
-        $isPrivileged = $principal.IsInRole($adminSid)
-    }
+    $isPrivileged = Test-FancyShellsPrivileged
 
     $Host.UI.RawUI.WindowTitle = "${user}@${hostname}: $($location.Path)"
 

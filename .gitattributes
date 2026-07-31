@@ -1,2 +1,7 @@
 bashrc text eol=lf
 install-fancy-shells.sh text eol=lf
+uninstall-fancy-shells.sh text eol=lf
+profile.ps1 text eol=lf
+install-fancy-shells.ps1 text eol=lf
+uninstall-fancy-shells.ps1 text eol=lf
+tools/bin/* text eol=lf

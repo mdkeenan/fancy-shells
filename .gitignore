@@ -1,4 +1,13 @@
-# Assets — only track files referenced in the repo
+# Local assets not referenced in the repo
 assets/*
 !assets/.gitkeep
 !assets/fancy-shells-1024x320.png
+
+# Prompt screenshots kept locally at repo root
+fancy-shells-windows-*.png
+
+# Tools runtime
+tools/venv/
+**/__pycache__/
+*.pyc
+*.local.json

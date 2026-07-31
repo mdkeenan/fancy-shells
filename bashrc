@@ -1,3 +1,4 @@
+# fancy-shells version: 2.0.0 — https://github.com/mdkeenan/fancy-shells
 # ~/.bashrc: executed by bash(1) for non-login shells.
 
 # If not running interactively, don't do anything
@@ -6,13 +7,23 @@ case $- in
      *) return ;;
 esac
 
+# fancy-shells tools on PATH (install writes ~/.fancy-shells-home)
+if [ -f "$HOME/.fancy-shells-home" ]; then
+    _fs_home=$(tr -d '\r\n' < "$HOME/.fancy-shells-home")
+    if [ -n "$_fs_home" ] && [ -d "$_fs_home/tools/bin" ]; then
+        case ":$PATH:" in
+            *":$_fs_home/tools/bin:"*) ;;
+            *) PATH="$_fs_home/tools/bin:$PATH" ;;
+        esac
+    fi
+    unset _fs_home
+fi
+
 # History settings
 HISTCONTROL=ignoreboth              # ignore duplicates and leading-space commands
 shopt -s histappend                 # append to the history file, don't overwrite it
 HISTSIZE=50000
 HISTFILESIZE=100000
-
-# Keep different sessions' history in sync (PROMPT_COMMAND extended below after _prompt_dir_short)
 
 # check the window size after each command and, if necessary,
 # update the values of LINES and COLUMNS.
@@ -41,90 +52,79 @@ if [ -n "${force_color_prompt:-}" ]; then
     fi
 fi
 
-# ANSI color codes
-RS="\[\033[0m\]"    # reset
-HC="\[\033[1m\]"    # hicolor
-UL="\[\033[4m\]"    # underline
-INV="\[\033[7m\]"   # inverse background and foreground
-FBLK="\[\033[30m\]"
+# ANSI color codes (prompt only)
+RS="\[\033[0m\]"
+HC="\[\033[1m\]"
 FRED="\[\033[31m\]"
 FGRN="\[\033[32m\]"
 FYEL="\[\033[33m\]"
 FBLE="\[\033[34m\]"
-FMAG="\[\033[35m\]"
 FCYN="\[\033[36m\]"
-FWHT="\[\033[37m\]"
-FDGRY="\[\033[90m\]"  # dim gray
-BBLK="\[\033[40m\]"
-BRED="\[\033[41m\]"
-BGRN="\[\033[42m\]"
-BYEL="\[\033[43m\]"
-BBLE="\[\033[44m\]"
-BMAG="\[\033[45m\]"
-BCYN="\[\033[46m\]"
-BWHT="\[\033[47m\]"
+FDGRY="\[\033[90m\]"
 
-# Shorten each path segment to 3 characters for the prompt directory display
-_prompt_dir_short() {
+_fancy_shells_shorten_segments() {
     local part
+    local result=''
+    local IFS='/'
+    read -ra _path_parts <<< "$1"
+    for part in "${_path_parts[@]}"; do
+        [[ -n "$part" ]] && result+="/${part:0:3}"
+    done
+    printf '%s' "$result"
+}
+
+_fancy_shells_prompt_prep() {
+    local part
+
     if [[ "$PWD" == "$HOME" ]]; then
         _prompt_dir='~'
-        return
-    fi
-    if [[ "$PWD" == "$HOME"/* ]]; then
+    elif [[ "$PWD" == "$HOME"/* ]]; then
         _prompt_dir='~'
         local IFS='/'
         read -ra _path_parts <<< "${PWD#$HOME/}"
         for part in "${_path_parts[@]}"; do
             [[ -n "$part" ]] && _prompt_dir+="/${part:0:3}"
         done
-        return
-    fi
-    _prompt_dir=''
-    if [[ "$PWD" == /* ]]; then
-        local IFS='/'
-        read -ra _path_parts <<< "${PWD#/}"
-        for part in "${_path_parts[@]}"; do
-            [[ -n "$part" ]] && _prompt_dir+="/${part:0:3}"
-        done
+    elif [[ "$PWD" == /* ]]; then
+        _prompt_dir=$(_fancy_shells_shorten_segments "${PWD#/}")
         [[ -z "$_prompt_dir" ]] && _prompt_dir='/'
     else
         _prompt_dir="${PWD:0:3}"
     fi
+
+    if [ "$EUID" -eq 0 ]; then
+        _is_admuser=1
+    else
+        _is_admuser=0
+        _groups=$(id -nG 2>/dev/null) || _groups=
+        case " $_groups " in
+            *" sudo "*|*" wheel "*|*" admin "*) _is_admuser=1 ;;
+        esac
+    fi
+
+    if [ "$_is_admuser" -eq 1 ]; then
+        _priv="${FRED}admuser"
+        _priv_label=admuser
+    else
+        _priv="${FDGRY}stduser"
+        _priv_label=stduser
+    fi
 }
 
-# Privilege label: admuser if root or in sudo/wheel/admin group
-_is_admuser=0
-if [ "$EUID" -eq 0 ]; then
-    _is_admuser=1
-else
-    _groups=$(id -nG 2>/dev/null) || _groups=
-    case " $_groups " in
-        *" sudo "*|*" wheel "*|*" admin "*) _is_admuser=1 ;;
-    esac
-fi
-
-if [ "$_is_admuser" -eq 1 ]; then
-    _priv="${FRED}admuser"
-    _priv_label=admuser
-else
-    _priv="${FDGRY}stduser"
-    _priv_label=stduser
-fi
-
 if [ "${color_prompt:-}" = yes ]; then
-    PS1="${HC}${FYEL}[${RS}\A${FYEL}:${FGRN}${debian_chroot:+($debian_chroot)}\u${FYEL}:${_priv}${FYEL}:${FCYN}\h${FYEL}:${FBLE}\${_prompt_dir}${FYEL}]\$ ${RS}"
+    PS1="${HC}${FYEL}[${RS}\t${FYEL}:${FGRN}${debian_chroot:+($debian_chroot)}\u${FYEL}:\${_priv}${FYEL}:${FCYN}\h${FYEL}:${FBLE}\${_prompt_dir}${FYEL}]\$ ${RS}"
 else
-    PS1='${debian_chroot:+($debian_chroot)}\u:'"$_priv_label"':\h:${_prompt_dir}$ '
+    PS1='${debian_chroot:+($debian_chroot)}\u:${_priv_label}:\h:${_prompt_dir}$ '
 fi
-unset _is_admuser _groups _priv _priv_label _path_parts
 unset color_prompt force_color_prompt
 
 # Keep different sessions' history in sync
-if [[ -z "${PROMPT_COMMAND:-}" ]]; then
-  PROMPT_COMMAND='_prompt_dir_short; history -a; history -n'
-else
-  PROMPT_COMMAND='_prompt_dir_short; history -a; history -n; '"$PROMPT_COMMAND"
+if [[ "${PROMPT_COMMAND:-}" != *'_fancy_shells_prompt_prep'* ]]; then
+    if [[ -z "${PROMPT_COMMAND:-}" ]]; then
+        PROMPT_COMMAND='_fancy_shells_prompt_prep; history -a; history -n'
+    else
+        PROMPT_COMMAND='_fancy_shells_prompt_prep; history -a; history -n; '"$PROMPT_COMMAND"
+    fi
 fi
 
 # If this is an xterm set the title to user@host:dir

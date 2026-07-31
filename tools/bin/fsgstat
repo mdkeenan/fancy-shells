@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+PYTHON="$ROOT/venv/bin/python"
+if [[ ! -x "$PYTHON" ]]; then
+  if [[ -x "$ROOT/venv/Scripts/python.exe" ]]; then
+    PYTHON="$ROOT/venv/Scripts/python.exe"
+  else
+    echo "fancy-shells: tools venv not found. Run install-fancy-shells." >&2
+    exit 1
+  fi
+fi
+exec "$PYTHON" "$ROOT/gstat/gstat.py" "$@"
