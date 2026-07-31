@@ -75,7 +75,7 @@ See [TOOLS.md](TOOLS.md) for flags and examples.
 - Re-running the installer is safe: same version reinstalls; older → newer upgrades; newer → older prints a downgrade warning but still proceeds.
 - Pre-version installs (prompt-only fancy-shells with no version marker) are treated as `1.0.0` and upgrade cleanly to the current release (adds tools PATH + venv).
 
-When cutting a release, bump the same semver in `VERSION`, and in the first-line comments of `bashrc` and `profile.ps1`.
+When cutting a release, bump the same semver in `VERSION` and in the first-line comments of `bashrc` and `profile.ps1`, and record notable changes in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Requirements
 

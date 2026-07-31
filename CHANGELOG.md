@@ -2,6 +2,11 @@
 
 All notable changes to fancy-shells are documented here. Version numbers match [`VERSION`](VERSION).
 
+## 2.0.1
+
+- Fix Bash privilege segment showing literal `\[\033[31m\]` instead of red/dim-gray color when `admuser`/`stduser` is set from `PROMPT_COMMAND`.
+- Use readline ignore markers (`\001`/`\002`) for prompt ANSI codes so delayed `${_priv}` expansion colors correctly.
+
 ## 2.0.0
 
 - Install prompt config and `fs*` CLI tools together (Python venv under `tools/`, wrappers in `tools/bin`).

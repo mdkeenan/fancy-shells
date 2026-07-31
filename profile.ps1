@@ -1,4 +1,4 @@
-# fancy-shells version: 2.0.0 — https://github.com/mdkeenan/fancy-shells
+# fancy-shells version: 2.0.1 — https://github.com/mdkeenan/fancy-shells
 # PowerShell profile: custom prompt and shell defaults.
 
 # fancy-shells tools on PATH (install writes ~/.fancy-shells-home)

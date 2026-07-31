@@ -1,4 +1,4 @@
-# fancy-shells version: 2.0.0 — https://github.com/mdkeenan/fancy-shells
+# fancy-shells version: 2.0.1 — https://github.com/mdkeenan/fancy-shells
 # ~/.bashrc: executed by bash(1) for non-login shells.
 
 # If not running interactively, don't do anything
@@ -52,15 +52,17 @@ if [ -n "${force_color_prompt:-}" ]; then
     fi
 fi
 
-# ANSI color codes (prompt only)
-RS="\[\033[0m\]"
-HC="\[\033[1m\]"
-FRED="\[\033[31m\]"
-FGRN="\[\033[32m\]"
-FYEL="\[\033[33m\]"
-FBLE="\[\033[34m\]"
-FCYN="\[\033[36m\]"
-FDGRY="\[\033[90m\]"
+# ANSI color codes (prompt only).
+# Use readline ignore markers \001/\002 (not \[/\]) so colors still work when
+# expanded from variables set in PROMPT_COMMAND (e.g. ${_priv}).
+RS=$'\001\033[0m\002'
+HC=$'\001\033[1m\002'
+FRED=$'\001\033[31m\002'
+FGRN=$'\001\033[32m\002'
+FYEL=$'\001\033[33m\002'
+FBLE=$'\001\033[34m\002'
+FCYN=$'\001\033[36m\002'
+FDGRY=$'\001\033[90m\002'
 
 _fancy_shells_shorten_segments() {
     local part
